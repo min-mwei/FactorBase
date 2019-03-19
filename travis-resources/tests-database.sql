@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.1.73, for redhat-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.34, for Linux (x86_64)
 --
 -- Host: localhost    Database: tests-database
 -- ------------------------------------------------------
--- Server version	5.1.73
+-- Server version	5.5.34
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -73,6 +73,29 @@ LOCK TABLES `t2` WRITE;
 INSERT INTO `t2` VALUES ('B',NULL,NULL),('C',1,2),('Jack',3,1),('Kim2',2,NULL);
 /*!40000 ALTER TABLE `t2` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `test_inserts`
+--
+
+DROP TABLE IF EXISTS `test_inserts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `test_inserts` (
+  `int_col` int(11) DEFAULT NULL,
+  `str_col` varchar(32) DEFAULT NULL,
+  `bool_col` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `test_inserts`
+--
+
+LOCK TABLES `test_inserts` WRITE;
+/*!40000 ALTER TABLE `test_inserts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `test_inserts` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -83,4 +106,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2018-08-16  0:19:17
+-- Dump completed on 2019-03-19 15:16:15
