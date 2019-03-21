@@ -14,9 +14,6 @@ package ca.sfu.cs.factorbase.tables;
  * false: mult1-mult2 ?
  * try: Financial_std_Training1_db.`operation(trans0)_a_star`
  */
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,10 +22,10 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+import ca.sfu.cs.factorbase.util.QueryGenerator;
+
 import com.mysql.jdbc.Connection;
 import com.mysql.jdbc.ResultSetMetaData;
-
-import ca.sfu.cs.factorbase.util.QueryGenerator;
 
 /**
  * Sort merge version3
@@ -40,6 +37,8 @@ public class Sort_merge3 {
 
     public static void sort_merge(String table1, String table2, String table3, Connection conn) throws SQLException, IOException {
         logger.info("\nGenerating false table by Subtraction using Sort_merge, cur_false_Table is: " + table3);
+        boolean origValue = conn.getAutoCommit();
+        conn.setAutoCommit(false);
         Statement st1 = conn.createStatement();
         Statement st2 = conn.createStatement();
 
@@ -122,9 +121,9 @@ public class Sort_merge3 {
                     try {
 //                        val1 = Integer.parseInt(rst1.getString(k));
 //                        val2 = Integer.parseInt(rst2.getString(k));
-                        val1 = Long.parseLong(rst1.getString(k));
-                        val2 = Long.parseLong(rst2.getString(k));
-                    } catch(java.lang.NumberFormatException e) {
+                        val1 = rst1.getLong(k);
+                        val2 = rst2.getLong(k);
+                    } catch(SQLException e) {
                     } finally {
                         if(rst1.getString(k).compareTo(rst2.getString(k)) > 0) {
                             val1 = 1;
@@ -153,7 +152,7 @@ public class Sort_merge3 {
 
                 if(val1 == val2) {
 //                    String query = "" + (Integer.parseInt(rst1.getString(1)) - Integer.parseInt(rst2.getString(1)));
-                    ps.setInt(1, rst1.getInt(1) - rst2.getInt(1));
+                    ps.setLong(1, rst1.getLong(1) - rst2.getLong(1));
 
                     for(int c = 2; c <= no_of_colmns; c++) {
                         ps.setString(c, rst1.getString(c));
@@ -190,6 +189,8 @@ public class Sort_merge3 {
             st2.execute("DROP TABLE IF EXISTS " + table3 + ";");
             st2.execute("CREATE TABLE " + table3 + " LIKE " + table1 + ";");
             ps.executeBatch();
+            conn.commit();
+            conn.setAutoCommit(origValue);
 
             rst1.close();
             rst2.close();
