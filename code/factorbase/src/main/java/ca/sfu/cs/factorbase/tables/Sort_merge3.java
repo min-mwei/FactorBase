@@ -15,14 +15,12 @@ package ca.sfu.cs.factorbase.tables;
  * try: Financial_std_Training1_db.`operation(trans0)_a_star`
  */
 import java.io.IOException;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import java.util.logging.Logger;
-
-import ca.sfu.cs.factorbase.util.QueryGenerator;
 
 import com.mysql.jdbc.Connection;
 import com.mysql.jdbc.ResultSetMetaData;
@@ -37,8 +35,6 @@ public class Sort_merge3 {
 
     public static void sort_merge(String table1, String table2, String table3, Connection conn) throws SQLException, IOException {
         logger.info("\nGenerating false table by Subtraction using Sort_merge, cur_false_Table is: " + table3);
-        boolean origValue = conn.getAutoCommit();
-        conn.setAutoCommit(false);
         Statement st1 = conn.createStatement();
         Statement st2 = conn.createStatement();
 
@@ -106,9 +102,7 @@ public class Sort_merge3 {
             rst1.absolute(1);
             rst2.absolute(1);
 
-            PreparedStatement ps = conn.prepareStatement(
-                QueryGenerator.createSimplePreparedInsertQuery(table3, no_of_colmns)
-            );
+            StringJoiner OUT_CSV = new StringJoiner(",");
 
             long time3 = System.currentTimeMillis();
 
@@ -135,12 +129,12 @@ public class Sort_merge3 {
                     }
 
                     if(val1 < val2) {
+                        StringJoiner IN_CSV = new StringJoiner(",");
                         for(int c = 1; c <= no_of_colmns; c++) {
-                            ps.setString(c, rst1.getString(c));
+                            IN_CSV.add("'" + rst1.getString(c) + "'");
                         }
 
-                        ps.addBatch();
-                        ps.clearParameters();
+                        OUT_CSV.add("(" + IN_CSV.toString() + ")");
 
                         i++;
                         break;
@@ -151,15 +145,15 @@ public class Sort_merge3 {
                 }
 
                 if(val1 == val2) {
+                    StringJoiner IN_CSV = new StringJoiner(",");
 //                    String query = "" + (Integer.parseInt(rst1.getString(1)) - Integer.parseInt(rst2.getString(1)));
-                    ps.setLong(1, rst1.getLong(1) - rst2.getLong(1));
+                    IN_CSV.add("'" + Long.toString(rst1.getLong(1) - rst2.getLong(1)) + "'");
 
                     for(int c = 2; c <= no_of_colmns; c++) {
-                        ps.setString(c, rst1.getString(c));
+                        IN_CSV.add("'" + rst1.getString(c) + "'");
                     }
 
-                    ps.addBatch();
-                    ps.clearParameters();
+                    OUT_CSV.add("(" + IN_CSV.toString() + ")");
                     i++;
                     j++;
                 }
@@ -175,22 +169,19 @@ public class Sort_merge3 {
             }
 
             while(rst1.next()) {
-                ps.setInt(1, rst1.getInt(1));
+                StringJoiner IN_CSV = new StringJoiner(",");
+                IN_CSV.add("'" + Integer.toString(rst1.getInt(1)) + "'");
                 for(int c = 2; c <= no_of_colmns; c++) {
-                    ps.setString(c, rst1.getString(c));
+                    IN_CSV.add("'" + rst1.getString(c) + "'");
                 }
-
-                ps.addBatch();
-                ps.clearParameters();
+                OUT_CSV.add("(" + IN_CSV.toString() + ")");
             }
 
             long time4 = System.currentTimeMillis();
 //            System.out.print("\t insert time: " + (time4 - time3));
             st2.execute("DROP TABLE IF EXISTS " + table3 + ";");
             st2.execute("CREATE TABLE " + table3 + " LIKE " + table1 + ";");
-            ps.executeBatch();
-            conn.commit();
-            conn.setAutoCommit(origValue);
+            st2.execute("INSERT INTO " + table3 + " VALUES " + OUT_CSV.toString());
 
             rst1.close();
             rst2.close();
