@@ -35,6 +35,8 @@ public class Sort_merge3 {
 
     public static void sort_merge(String table1, String table2, String table3, Connection conn) throws SQLException, IOException {
         logger.info("\nGenerating false table by Subtraction using Sort_merge, cur_false_Table is: " + table3);
+        boolean origValue = conn.getAutoCommit();
+        conn.setAutoCommit(false);
         Statement st1 = conn.createStatement();
         Statement st2 = conn.createStatement();
 
@@ -135,6 +137,10 @@ public class Sort_merge3 {
                         }
 
                         OUT_CSV.add("(" + IN_CSV.toString() + ")");
+                        if (OUT_CSV.length() == 10000) {
+                            st2.execute("INSERT INTO " + table3 + " VALUES " + OUT_CSV.toString());
+                            OUT_CSV = new StringJoiner(",");
+                        }
 
                         i++;
                         break;
@@ -154,6 +160,10 @@ public class Sort_merge3 {
                     }
 
                     OUT_CSV.add("(" + IN_CSV.toString() + ")");
+                    if (OUT_CSV.length() == 10000) {
+                        st2.execute("INSERT INTO " + table3 + " VALUES " + OUT_CSV.toString());
+                        OUT_CSV = new StringJoiner(",");
+                    }
                     i++;
                     j++;
                 }
@@ -175,6 +185,10 @@ public class Sort_merge3 {
                     IN_CSV.add("'" + rst1.getString(c) + "'");
                 }
                 OUT_CSV.add("(" + IN_CSV.toString() + ")");
+                if (OUT_CSV.length() == 10000) {
+                    st2.execute("INSERT INTO " + table3 + " VALUES " + OUT_CSV.toString());
+                    OUT_CSV = new StringJoiner(",");
+                }
             }
 
             long time4 = System.currentTimeMillis();
@@ -182,6 +196,9 @@ public class Sort_merge3 {
             st2.execute("DROP TABLE IF EXISTS " + table3 + ";");
             st2.execute("CREATE TABLE " + table3 + " LIKE " + table1 + ";");
             st2.execute("INSERT INTO " + table3 + " VALUES " + OUT_CSV.toString());
+
+            conn.commit();
+            conn.setAutoCommit(origValue);
 
             rst1.close();
             rst2.close();
