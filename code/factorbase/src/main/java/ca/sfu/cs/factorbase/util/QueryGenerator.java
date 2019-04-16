@@ -82,4 +82,25 @@ public final class QueryGenerator {
 
         return builder.toString();
     }
+
+
+    public static String createSubtractionQuery(String table1, String table2, String subtractionColumn, List<String> joinOnColumns) {
+        StringBuilder builder = new StringBuilder("SELECT ");
+        builder.append(table1 + "." + subtractionColumn + " - IFNULL(" + table2 + "." + subtractionColumn + ", 0) ");
+        StringJoiner csv = new StringJoiner(", ");
+
+        for (String column : joinOnColumns) {
+            csv.add(table1 + ".`" + column + "`");
+        }
+
+        if (csv.length() != 0) {
+            builder.append(", " + csv.toString() + " ");
+        }
+
+        builder.append("FROM " + table1 + " ");
+        builder.append("LEFT JOIN " + table2 + " ");
+        builder.append("ON " + constructWhereClauseJoin(joinOnColumns, table1, table2));
+
+        return builder.toString();
+    }
 }
