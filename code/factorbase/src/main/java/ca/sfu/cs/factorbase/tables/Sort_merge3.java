@@ -14,19 +14,16 @@ package ca.sfu.cs.factorbase.tables;
  * false: mult1-mult2 ?
  * try: Financial_std_Training1_db.`operation(trans0)_a_star`
  */
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
-import com.mysql.jdbc.Connection;
-import com.mysql.jdbc.ResultSetMetaData;
-import com.mysql.jdbc.Statement;
-
 import ca.sfu.cs.factorbase.util.QueryGenerator;
+
+import com.mysql.jdbc.Connection;
+import com.mysql.jdbc.Statement;
 
 /**
  * Sort merge version3
@@ -68,7 +65,10 @@ public class Sort_merge3 {
 
             st2.execute("DROP TABLE IF EXISTS " + table3 + ";");
             st2.execute("CREATE TABLE " + table3 + " SELECT * FROM " + table1 + " LIMIT 0;");
-            st2.execute("INSERT INTO " + table3 + " " + QueryGenerator.createSubtractionQuery(table1, table2, "MULT", orderList));
+            String query = "INSERT INTO " + table3 + " " + QueryGenerator.createSubtractionQuery(table1, table2, "MULT", orderList);
+            System.out.println("Combination: " + Integer.valueOf(1));
+            System.out.println(query);
+            st2.execute(query);
 
             st1.close();
             st2.close();

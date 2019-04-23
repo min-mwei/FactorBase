@@ -364,10 +364,11 @@ public class BayesBaseCT_SortMerge {
                 String rnid_or=removedShort;
             
                 String cur_star_Table = "`" + removedShort.replace("`", "") + len + "_" + fc + "_star`";
-                String createStarString = "create table "+cur_star_Table +" as "+queryString;
+                String createStarString = "create table "+cur_star_Table + queryString;
                     
-            
-                logger.fine("\n create star String : " + createStarString );
+                st3.execute("SET tmp_table_size = 1024 * 1024 * 1024 * 4;");
+                st3.executeQuery("SET max_heap_table_size = 1024 * 1024 * 1024 * 4");
+                logger.fine("\n create star String : " + createStarString);
                 st3.execute(createStarString);      //create star table     
             
                  //adding  covering index May 21
@@ -376,12 +377,11 @@ public class BayesBaseCT_SortMerge {
                 String IndexString = makeIndexQuery(rs15, "Entries", " , ");
                 //logger.fine("Index String : " + IndexString);
                 //logger.fine("alter table "+cur_star_Table+" add index "+cur_star_Table+"   ( "+IndexString+" );");
-                st3.execute("alter table "+cur_star_Table+" add index "+cur_star_Table+"   ( "+IndexString+" );");       
+                st3.execute("alter table "+cur_star_Table+" add unique index "+cur_star_Table+"   ( "+IndexString+" );");       
                 long l3 = System.currentTimeMillis(); 
                 logger.info("Building Time(ms) for "+cur_star_Table+ " : "+(l3-l2)+" ms.\n");
                 //staring to create the _flat table
                 // Oct 16 2013
-                // here is the wrong version that always uses _counts table to generate the _flat table. 
                 //String    cur_CT_Table="`"+rchain.replace("`", "")+"_counts`";
                 // cur_CT_Table should be the one generated in the previous iteration
                 // for the very first iteration, it's _counts table
@@ -389,8 +389,8 @@ public class BayesBaseCT_SortMerge {
 
                 String cur_flat_Table = "`" + removedShort.replace("`", "") + len + "_" + fc + "_flat`";
                 String queryStringflat = "select sum("+cur_CT_Table+".`MULT`) as 'MULT', "+selectString + " from " +cur_CT_Table+" group by  "+ selectString +";" ;
-                String createStringflat = "create table "+cur_flat_Table+" as "+queryStringflat;
-                logger.fine("\n create flat String : " + createStringflat );         
+                String createStringflat = "create table "+cur_flat_Table+" ENGINE = MEMORY as "+queryStringflat;
+                logger.fine("\n create flat String : " + createStringflat);
                 st3.execute(createStringflat);      //create flat table
             
                  //adding  covering index May 21
@@ -399,7 +399,7 @@ public class BayesBaseCT_SortMerge {
                 String IndexString2 = makeIndexQuery(rs25, "Entries", " , ");
                 //logger.fine("Index String : " + IndexString2);
                 //logger.fine("alter table "+cur_flat_Table+" add index "+cur_flat_Table+"   ( "+IndexString2+" );");
-                st3.execute("alter table "+cur_flat_Table+" add index "+cur_flat_Table+"   ( "+IndexString2+" );");
+                st3.execute("alter table "+cur_flat_Table+" add unique index "+cur_flat_Table+"   ( "+IndexString2+" );");
                 long l4 = System.currentTimeMillis(); 
                 logger.info("Building Time(ms) for "+cur_flat_Table+ " : "+(l4-l3)+" ms.\n");
                 /**********starting to create _flase table***using sort_merge*******************************/
@@ -1164,6 +1164,9 @@ public class BayesBaseCT_SortMerge {
         while(rs.next()&count<16){
 
                 String temp =rs.getString(colName);
+                if (temp.equals("MULT")) {
+                    continue;
+                }
                 temp= "`"+temp+"`";
             parts.add(temp+ " ASC");
             count ++;

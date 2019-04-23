@@ -37,6 +37,47 @@ public final class QueryGenerator {
     }
 
     /**
+     * Generate the String used to join rows between tableA and tableB.
+     *
+     * @param columns - a list of the columns to join tableA and tableB on.
+     * @param tableA - the name of one table that will be joined with the second table.
+     * @param tableB - the name of a second table, which will be joined with the first table.
+     * @return a String that joins tableA and tableB on the given attributes plus NULL.
+     */
+    private static String constructWhereClauseJoin2(List<String> columns, String tableA, String tableB) {
+        ArrayList<String> conditions = new ArrayList<String>();
+
+        for (String column : columns) {
+            conditions.add(MessageFormat.format("{0}.{2} = {1}.{2}", tableA, tableB, "`" + column + "`"));
+        }
+
+        return String.join(" AND ", conditions);
+    }
+
+    /**
+     * Generate the String used to join rows between tableA and tableB.
+     *
+     * @param columns - a list of the columns to join tableA and tableB on.
+     * @param tableA - the name of one table that will be joined with the second table.
+     * @param tableB - the name of a second table, which will be joined with the first table.
+     * @return a String that joins tableA and tableB on the given attributes plus NULL.
+     */
+    private static String constructWhereClauseJoin3(
+        List<String> columns,
+        String tableA,
+        String tableB) {
+        ArrayList<String> conditions = new ArrayList<String>();
+
+        for (String column : columns) {
+            conditions.add(MessageFormat.format(
+                "IFNULL({0}.{2}, \"FBNULLASDF\") = IFNULL({1}.{2}, \"FBNULLASDF\")", tableA,
+                tableB, "`" + column + "`"));
+        }
+
+        return String.join(" AND ", conditions);
+    }
+    
+    /**
      * Generates a MySQL SELECT String that returns the items in tableA that are not in tableB.
      *
      * @param columnsA - a CSV of the columns to select from tableA.
@@ -99,7 +140,7 @@ public final class QueryGenerator {
 
         builder.append("FROM " + table1 + " ");
         builder.append("LEFT JOIN " + table2 + " ");
-        builder.append("ON " + constructWhereClauseJoin(joinOnColumns, table1, table2));
+        builder.append("ON " + constructWhereClauseJoin2(joinOnColumns, table1, table2));
 
         return builder.toString();
     }
