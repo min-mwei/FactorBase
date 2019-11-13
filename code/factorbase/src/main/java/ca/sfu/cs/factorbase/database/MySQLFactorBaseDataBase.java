@@ -406,7 +406,7 @@ public class MySQLFactorBaseDataBase implements FactorBaseDataBase {
             }
 
             // Generate CT tables.
-            CountsManager.buildCT();
+            CountsManager.buildCT(true);
 
             String tableName = null;
             String shortID = functorInfos.getShortID();

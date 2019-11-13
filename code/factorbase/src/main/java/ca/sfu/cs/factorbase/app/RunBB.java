@@ -69,7 +69,7 @@ public class RunBB {
         boolean usePreCounting = config.getProperty("PreCounting").equals("1");
         if (usePreCounting) {
             long buildCTStart = System.currentTimeMillis();
-            CountsManager.buildCT();
+            CountsManager.buildCT(false);
             logRunTime(logger, "Creating CT Tables", buildCTStart, System.currentTimeMillis());
         } else {
             long buildGlobalCountsStart = System.currentTimeMillis();
