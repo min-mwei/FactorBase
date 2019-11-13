@@ -714,9 +714,11 @@ public class CountsManager {
 
         ResultSet rs2 = st2.executeQuery(selectQuery);
 
-        String selectString = makeCommaSepQuery(rs2, "Entries", ", ");
+        String selectString = null;
         if (buildByProjection) {
-            selectString = "SUM(MULT) AS MULT, " + selectString;
+            selectString = "SUM(MULT) AS MULT, " + makeCommaSepQuery(rs2, "Entries", ", ", "AS ");
+        } else {
+            selectString = makeCommaSepQuery(rs2, "Entries", ", ");
         }
         logger.fine("SELECT String: " + selectString);
 
@@ -1106,12 +1108,31 @@ public class CountsManager {
      * @throws SQLException
      */
     private static String makeCommaSepQuery(ResultSet rs, String colName, String del) throws SQLException {
+        return makeCommaSepQuery(rs, colName, del, null);
+    }
+
+
+    private static String makeCommaSepQuery(
+        ResultSet results,
+        String columnName,
+        String delimiter,
+        String prefixDelimiter
+    ) throws SQLException {
         ArrayList<String> parts = new ArrayList<String>();
-        while(rs.next()){
-            parts.add(rs.getString(colName));
+        if (prefixDelimiter == null) {
+            while(results.next()){
+                parts.add(results.getString(columnName));
+            }
+        } else {
+            while(results.next()) {
+                String columnValue = results.getString(columnName);
+                int prefixDelimiterStartIndex = columnValue.indexOf(prefixDelimiter);
+                int prefixDelimiterEndIndex = prefixDelimiterStartIndex + prefixDelimiter.length();
+                parts.add(columnValue.substring(prefixDelimiterEndIndex));
+            }
         }
 
-        return String.join(del, parts);
+        return String.join(delimiter, parts);
     }
 
 
