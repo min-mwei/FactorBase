@@ -31,6 +31,7 @@ import ca.sfu.cs.common.Configuration.Config;
 import ca.sfu.cs.factorbase.data.FunctorNodesInfo;
 import ca.sfu.cs.factorbase.lattice.LatticeGenerator;
 import ca.sfu.cs.factorbase.lattice.RelationshipLattice;
+import ca.sfu.cs.factorbase.util.LogWriter;
 import ca.sfu.cs.factorbase.util.MySQLScriptRunner;
 import ca.sfu.cs.factorbase.util.Sort_merge3;
 
@@ -86,7 +87,12 @@ public class CountsManager {
         buildRChainCounts(con_CT, relationshipLattice, projectCounts);
 
         // building CT tables for Rchain
+        long startCTGen = System.currentTimeMillis();
         CTGenerator(relationshipLattice);
+        long diff = System.currentTimeMillis() - startCTGen;
+        System.out.println("  Runtime CTGenerator: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "CTGeneratorTotal", diff);
+
         disconnectDB();
     }
 
@@ -100,18 +106,25 @@ public class CountsManager {
      */
     private static RelationshipLattice propagateFunctorSetInfo(Connection dbConnection) throws SQLException {
         // Transfer metadata from the "_setup" database to the "_BN" database based on the FunctorSet.
+        long start = System.currentTimeMillis();
         MySQLScriptRunner.callSP(
             dbConnection,
             "cascadeFS"
         );
-
+        long diff = System.currentTimeMillis() - start;
+        System.out.println("  Runtime cascadeFS: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "cascadeFS", diff);
+        long startLattice = System.currentTimeMillis();
         // Generate the relationship lattice based on the FunctorSet.
         RelationshipLattice relationshipLattice = LatticeGenerator.generate(
             dbConnection,
             databaseName_std
         );
-
+        diff = System.currentTimeMillis() - startLattice;
+        System.out.println("  Runtime lattice: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "lattice", diff);
         // TODO: Add support for Continuous = 1.
+        long startMQ = System.currentTimeMillis();
         if (cont.equals("1")) {
             throw new UnsupportedOperationException("Not Implemented Yet!");
         } else {
@@ -120,11 +133,17 @@ public class CountsManager {
                 "populateMQ"
             );
         }
-
+        diff = System.currentTimeMillis() - startMQ;
+        System.out.println("  Runtime populateMQ: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "populateMQ", diff);
+        long startMQRChain = System.currentTimeMillis();
         MySQLScriptRunner.callSP(
             dbConnection,
             "populateMQRChain"
         );
+        diff = System.currentTimeMillis() - startMQRChain;
+        System.out.println("  Runtime populateMQRChain: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "populateMQRChain", diff);
 
         return relationshipLattice;
     }
@@ -163,10 +182,17 @@ public class CountsManager {
         long l = System.currentTimeMillis(); //@zqian : CT table generating time
            // handling Pvars, generating pvars_counts       
         BuildCT_Pvars();
-        
+        long diff = System.currentTimeMillis() - l;
+        System.out.println("    Runtime buildct_pvars: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "buildct_pvars", diff);
         // preparing the _join part for _CT tables
+        l = System.currentTimeMillis();
         BuildCT_Rnodes_join();
+        diff = System.currentTimeMillis() - l;
+        System.out.println("    Runtime ct_rnodes_join: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "buildct_rnodes_join", diff);
 
+        l = System.currentTimeMillis();
         if (linkCorrelation.equals("1") && relationshipLattice.getHeight() != 0) {
             // handling Rnodes with Lattice Moebius Transform
             // Retrieve the first level of the lattice.
@@ -191,7 +217,9 @@ public class CountsManager {
                 logger.fine(" Rchain! are done");
             }
         }
-        
+        diff = System.currentTimeMillis() - l;
+        System.out.println("    Runtime build_flat_star_ct: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "build_flat_star_ct", diff);
 
         //delete the tuples with MULT=0 in the biggest CT table
         String BiggestRchain = relationshipLattice.getLongestRChainShortID();
@@ -199,11 +227,15 @@ public class CountsManager {
 
         if (BiggestRchain != null)
         {
+            l = System.currentTimeMillis();
             try (Statement st_CT = con_CT.createStatement()) {
                 String deleteQuery = "DELETE FROM `" + BiggestRchain + "_CT` WHERE MULT = '0';";
                 logger.fine(deleteQuery);
                 st_CT.execute(deleteQuery);
             }
+            diff = System.currentTimeMillis() - l;
+            System.out.println("    Runtime delete mult = 0: " + diff + "ms.");
+            LogWriter.updateLog(con_BN, "deleteZeroesFromCT", diff);
         }
         
         long l2 = System.currentTimeMillis();  //@zqian
@@ -248,6 +280,8 @@ public class CountsManager {
         int latticeHeight = relationshipLattice.getHeight();
 
         // Building the <RChain>_counts tables.
+        long[] cumulativeTimes = new long[3];
+        long l = System.currentTimeMillis();
         if(linkCorrelation.equals("1")) {
             // Generate the counts tables.
             for(int len = 1; len <= latticeHeight; len++){
@@ -255,7 +289,8 @@ public class CountsManager {
                     dbConnection,
                     relationshipLattice.getRChainsInfo(len),
                     false,
-                    buildByProjection
+                    buildByProjection,
+                    cumulativeTimes
                 );
             }
         } else {
@@ -265,10 +300,23 @@ public class CountsManager {
                     dbConnection,
                     relationshipLattice.getRChainsInfo(len),
                     true,
-                    buildByProjection
+                    buildByProjection,
+                    cumulativeTimes
                 );
             }
         }
+        long count12diff = System.currentTimeMillis() - l;
+        long diff = cumulativeTimes[0];
+        System.out.println("      Runtime counts12_query_generation: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "counts12_query_generation", diff);
+        diff = cumulativeTimes[1];
+        System.out.println("      Runtime counts12_create_table: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "counts12_create_table", diff);
+        diff = cumulativeTimes[2];
+        System.out.println("      Runtime counts12_add_index: " + diff + "ms.");
+        LogWriter.updateLog(con_BN, "counts12_add_index", diff);
+        System.out.println("    Runtime buildct_rnodes_counts1/2: " + count12diff + "ms.");
+        LogWriter.updateLog(con_BN, "buildct_rnodes_counts12", count12diff);
     }
 
 
@@ -641,7 +689,8 @@ public class CountsManager {
         Connection dbConnection,
         List<FunctorNodesInfo> rchainInfos,
         boolean copyToCT,
-        boolean buildByProjection
+        boolean buildByProjection,
+        long[] cumulativeTimes
     ) throws SQLException {
         for (FunctorNodesInfo rchainInfo : rchainInfos) {
             // Get the short and full form rnids for further use.
@@ -654,7 +703,8 @@ public class CountsManager {
                 dbConnection,
                 rchain,
                 shortRchain,
-                buildByProjection
+                buildByProjection,
+                cumulativeTimes
             );
 
             if (copyToCT) {
@@ -688,7 +738,8 @@ public class CountsManager {
         Connection dbConnection,
         String rchain,
         String shortRchain,
-        boolean buildByProjection
+        boolean buildByProjection,
+        long[] cumulativeTimes
     ) throws SQLException {
         // Name of the counts table to generate.
         String countsTableName = shortRchain + "_counts";
@@ -696,7 +747,7 @@ public class CountsManager {
         // Create new statements.
         Statement st2 = con_BN.createStatement();
         Statement st3 = dbConnection.createStatement();
-
+        long queryStart = System.currentTimeMillis();
         // Create SELECT query string.
         String selectQuery =
             "SELECT DISTINCT Entries " +
@@ -789,18 +840,24 @@ public class CountsManager {
 
         String createString = "CREATE TABLE `" + countsTableName + "`" + " AS " + queryString;
         logger.fine("CREATE string: " + createString);
-
+        long diff = System.currentTimeMillis() - queryStart;
+        cumulativeTimes[0] += diff;
+        long creationStart = System.currentTimeMillis();
         st3.execute("SET tmp_table_size = " + dbTemporaryTableSize + ";");
         st3.executeQuery("SET max_heap_table_size = " + dbTemporaryTableSize + ";");
         st3.execute(createString);
 
+        diff = System.currentTimeMillis() - creationStart;
+        cumulativeTimes[1] += diff;
+        long indexStart = System.currentTimeMillis();
         // Add covering index.
         addCoveringIndex(
             dbConnection,
             databaseName_CT,
             countsTableName
         );
-
+        diff = System.currentTimeMillis() - indexStart;
+        cumulativeTimes[2] += diff;
         // Close statements.
         st2.close();
         st3.close();

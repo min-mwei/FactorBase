@@ -9,6 +9,7 @@ import java.sql.Statement;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,7 @@ import ca.sfu.cs.factorbase.lattice.LatticeGenerator;
 import ca.sfu.cs.factorbase.lattice.RelationshipLattice;
 import ca.sfu.cs.factorbase.learning.CountsManager;
 import ca.sfu.cs.factorbase.util.KeepTablesOnly;
+import ca.sfu.cs.factorbase.util.LogWriter;
 import ca.sfu.cs.factorbase.util.MySQLScriptRunner;
 import ca.sfu.cs.factorbase.util.QueryGenerator;
 
@@ -107,6 +109,12 @@ public class MySQLFactorBaseDataBase implements FactorBaseDataBase {
 
             // Switch to start using the BN database.
             this.dbConnection.setCatalog(this.dbInfo.getBNDatabaseName());
+
+            MySQLScriptRunner.runScript(
+                this.dbConnection,
+                Config.SCRIPTS_DIRECTORY + "logging.sql",
+                this.baseDatabaseName
+            );
 
             MySQLScriptRunner.runScript(
                 this.dbConnection,
@@ -368,10 +376,12 @@ public class MySQLFactorBaseDataBase implements FactorBaseDataBase {
         int totalNumberOfStates
     ) throws DataBaseException {
         try {
-            Set<String> allFunctorNodesExceptChild = parents;
+            Set<String> allFunctorNodesExceptChild = new HashSet<String>(parents);
 
             // If we're learning at an RChain point in the relationship lattice, add the RNodes of the RChain to the
             // FunctorSet.
+            Set<String> family = new HashSet<String>(parents);
+            family.add(child);
             if (functorInfos.isRChainID()) {
                 String[] rnodes = functorInfos.getID().replace("),", ") ").split(" ");
                 allFunctorNodesExceptChild = new HashSet<String>(Arrays.asList(rnodes));
@@ -404,10 +414,20 @@ public class MySQLFactorBaseDataBase implements FactorBaseDataBase {
                     )
                 );
             }
-
+            Set<String> allFunctorNodes = new HashSet<String>(allFunctorNodesExceptChild);
+            allFunctorNodes.add(child);
+            List<String> allFNs = new ArrayList<String>(allFunctorNodes);
+            Collections.sort(allFNs);
+            LogWriter.addLog(
+                this.dbConnection,
+                functorInfos.getID(),
+                String.join(",", family),
+                child
+            );
+            long start = System.currentTimeMillis();
             // Generate CT tables.
             CountsManager.buildCT(true);
-
+            LogWriter.updateLog(this.dbConnection, "Total", System.currentTimeMillis() - start);
             String tableName = null;
             String shortID = functorInfos.getShortID();
             if (shortID != null) {
