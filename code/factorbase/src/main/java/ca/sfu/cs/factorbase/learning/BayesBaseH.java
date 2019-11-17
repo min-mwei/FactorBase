@@ -136,7 +136,8 @@ public class BayesBaseH {
 
         // Mapping the orig_rnid back and create a new table: Final_Path_BayesNets. //Sep 19, zqian
         BIF_Generator.Final_Path_BayesNets(con2, rchain);
-
+        System.out.print("Test Run Complete!  Exiting...");
+        System.exit(0);
         // Parameter learning.
         // Add setup options Yan Sept. 10th
         // Continuous
