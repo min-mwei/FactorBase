@@ -838,7 +838,7 @@ public class CountsManager {
             }
         }
 
-        String createString = "CREATE TABLE `" + countsTableName + "`" + " AS " + queryString;
+        String createString = "CREATE TABLE `" + countsTableName + "`" + " ENGINE = MEMORY AS " + queryString;
         logger.fine("CREATE string: " + createString);
         long diff = System.currentTimeMillis() - queryStart;
         cumulativeTimes[0] += diff;
